@@ -12,12 +12,28 @@ Open a notebook and select the project's `.venv` Python interpreter as its kerne
 
 - `notebooks/01_loss_check.ipynb`: compare analytic binary RobustCE against numerical maximization over feasible targets.
 - `notebooks/02_experiments.ipynb`: compare five fixed variants on both datasets: CE, RobustCE(0.05), RobustCE(0.1), RobustCE(0.2), and Smoothing(0.2). Smoothing uses `epsilon=0.2` to match the positive-margin penalty of RobustCE with `delta=0.1` for critical analysis (d); the losses differ on negative margins. Tune only learning rate at training-label corruption `eta=0.1`, separately for each variant, then freeze it and compare `eta=0` against `eta=0.1` on 5 new evaluation seeds. Uses 3 learning-rate candidates and 3 tuning seeds; validation and test labels stay clean. All three RobustCE radii appear in the same metric, learning-curve, confidence, and probability-map figures. The common robust evaluation radius stays `delta_eval=0.1` for all variants.
+- `notebooks/03_gaussian_eta_delta.ipynb`: sweep 7 corruption rates and 12 RobustCE radii on Gaussian logistic regression. Compare ordinary clean test CE against a separately validation-tuned CE baseline at each corruption rate. A zero-centered Plotly grid is green for improvement, red for deterioration, and white for zero or small absolute changes; saturation shows gain magnitude. Uses 3 tuning seeds and 5 new evaluation seeds, with matched data and label flips. Includes resumable run caches and a standalone interactive HTML plot.
+- `notebooks/04_gaussian_eta_epsilon.ipynb`: the same red-white-green clean-test CE comparison for label smoothing, on a 7 x 12 eta/epsilon grid. Epsilon values are twice notebook 03's deltas to match positive-margin penalties. Uses the same data, corruption masks, seeds, optimizer, and training budget; compatible CE-only baselines from notebook 03 are reused automatically, with a local-training fallback.
+- `notebooks/05_gaussian_smoothing_vs_robust.ipynb`: directly compare Smoothing against RobustCE with matched `epsilon=2*delta`, reusing verified runs from notebooks 03/04 and retaining their separately validation-selected learning rates. Heatmap values are ordinary clean test `CE(Smoothing) - CE(RobustCE)`: positive/green means RobustCE is better, negative/red means smoothing is better, and near zero is white. No new training is needed.
+- `notebooks/06_gaussian_noise_aware.ipynb`: derive forward noise-aware CE from an assumed symmetric label-flip probability. Sweep 7 actual eta values and 12 expected eta values, tune lr using clean validation CE, and compare clean test `CE(CE baseline) - CE(NoiseAware)`. Positive/green means noise-aware is better; negative/red favors CE; zero is white. Train against noisy observation probability `q=eta_expected+(1-2*eta_expected)*sigmoid(z)`, but evaluate clean test CE using the original clean logits. Includes stable log-space likelihood, resumable caches, compatible CE-baseline reuse, and an interactive HTML grid.
 
 Execute the notebook and save its outputs from the command line:
 
 ```powershell
 uv run --locked jupyter execute notebooks/01_loss_check.ipynb --inplace
 uv run --locked jupyter execute notebooks/02_experiments.ipynb --inplace --timeout=1800
+uv run --locked jupyter execute notebooks/03_gaussian_eta_delta.ipynb --inplace --timeout=1800
+uv run --locked jupyter execute notebooks/04_gaussian_eta_epsilon.ipynb --inplace --timeout=1800
+uv run --locked jupyter execute notebooks/05_gaussian_smoothing_vs_robust.ipynb --inplace
+uv run --locked jupyter execute notebooks/06_gaussian_noise_aware.ipynb --inplace --timeout=1800
 ```
 
 The second notebook runs independently and performs 90 tuning runs and 100 evaluation runs on CPU. It saves metrics, selected settings, the protocol, representative models, and paired confidence changes for every pair of RobustCE radii under `results/02_fixed_losses/`. Detailed records are saved as CSV/JSON files; no tables are displayed in the notebooks.
+
+The third notebook also runs independently. Its default grid has 756 tuning runs and 420 evaluation runs, including reused zero-radius CE controls. Results are saved under a settings/source fingerprint in `results/03_gaussian_eta_delta/`; `latest_run.json` points to the current run. Successful cached runs are reused on subsequent executions. Positive heatmap cells are exploratory observed wins, not significance claims.
+
+The fourth notebook has 756 tuning records and 420 evaluation records. With a compatible completed notebook 03, 63 tuning CE baselines and 35 evaluation CE baselines are reused, leaving 1,078 new smoothing runs. It saves resumable caches and an interactive HTML grid under `results/04_gaussian_eta_epsilon/`; `latest_run.json` points to its current run. It can also run without notebook 03 by training the CE baselines itself.
+
+Run notebooks 03 and 04 before notebook 05. The fifth notebook validates settings, numerical implementation compatibility, frozen learning rates, source fingerprints, and paired corruption fractions before comparing the 84 matched cells. It saves an interactive HTML grid and paired differences under `results/05_gaussian_smoothing_vs_robust/`.
+
+Notebook 06 runs independently. Its default grid contains 756 tuning records and 420 evaluation records, on the same data and seeds as notebooks 03/04. It optionally reuses 63 tuning and 35 evaluation CE-baseline records from notebook 03; all positive expected-noise settings are trained separately. Results are saved under `results/06_gaussian_noise_aware/`, with `latest_run.json` pointing to the current run. Expected noise rates are below 0.5; expected zero is an exact CE control.
