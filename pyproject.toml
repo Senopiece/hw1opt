@@ -11,8 +11,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "matplotlib>=3.11.2",
     "nbclient>=0.10,<0.12",
     "nbformat>=5.10,<6",
+    "pymupdf>=2.1",
+    "typst>=0.15.2",
 ]
 
 [tool.uv.sources]
